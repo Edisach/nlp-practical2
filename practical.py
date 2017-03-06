@@ -120,7 +120,7 @@ def embed_text(text):
 
 # Define classifier model
 
-steps = 200000      # Number of times to run training step
+steps = 10000      # Number of times to run training step
 batch_size = 50
 dims = 50           # Dimensionality of vocabulary
 classes = 8         # Dimensionality of classes
@@ -203,8 +203,6 @@ doc_validation["text"] = text[1585:1590]
 doc_validation["labels"] = labels[1585:1590]
 doc_test["text"] = text[-250:]
 doc_test["labels"] = labels[-250:]
-print(doc_validation["labels"])
-print(doc_validation["text"])
 
 # Runs tensorflow
 init = tf.global_variables_initializer()
@@ -225,9 +223,9 @@ def original_session():
     for i in range(steps):
         samples = random.sample(range(doc_train["length"]), batch_size)
         text_array, labels_array = batch_input_fn(doc_train, samples)
+        _, c = sess.run([train_step, loss], feed_dict={x: text_array, y: labels_array})
         if i % 100 == 0:
-            print("Run training step number", i)
-        sess.run(train_step, feed_dict={x: text_array, y: labels_array})
+            print("Run training step number", i, "Cost:", c)
     test_text, test_labels = input_fn(doc_test)
     train_text, train_labels = input_fn(doc_train)
     print ("Training accuracy: ", sess.run(accuracy, feed_dict={x: train_text, y: train_labels}))
