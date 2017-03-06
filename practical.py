@@ -7,17 +7,21 @@ import gensim
 import re
 import nltk
 import tempfile
+import random
+
+# Needs the 50d glove text file and the ted xml file in the directory
 
 
 # Define all the helper functions
 def iter_files(doc_tree):
+    labels = []
+    text = []
     for doc in doc_tree.iterfind('./file'):
         raw_keywords = doc.find('head').find('keywords').text
         keywords = raw_keywords.split(", ")
-        file_dict = {}
-        file_dict['label'] = keywords_to_label(keywords)
-        file_dict['text'] = text_to_vec(doc.find('content').text)
-        yield file_dict
+        labels.append(keywords_to_label(keywords))
+        text.append(text_to_vec(doc.find('content').text))
+    return np.array(labels), np.array(text)
 
 
 def get_all_text(tree):
@@ -83,9 +87,18 @@ labels_dict = {
 
 
 def input_fn(df):
-    label = df["label"].values
-    text_values = df["text"].values
-    return text_values, label
+    return df["text"], df["labels"]
+
+
+def batch_input_fn(df, samples):
+    number_samples = len(samples)
+    text_array = np.zeros(shape=(number_samples, 50))
+    labels_array = np.zeros(shape=(number_samples, 8))
+    for x in range(number_samples):
+        text_array[x] = df["text"][x]
+        labels_array[x] = df["labels"][x]
+
+    return text_array, labels_array
 
 
 # converts text into a list of words
@@ -107,11 +120,11 @@ def embed_text(text):
 
 # Define classifier model
 
-steps = 100000      # Number of times to run training step
+steps = 200000      # Number of times to run training step
 batch_size = 50
 dims = 50           # Dimensionality of vocabulary
 classes = 8         # Dimensionality of classes
-hidden = 100        # Hidden features
+hidden = 100         # Hidden features
 x = tf.placeholder(tf.float32, shape=[None, dims])
 y = tf.placeholder(tf.float32, shape=[None, classes])
 
@@ -136,8 +149,12 @@ accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 # Define alternate model
 def ffnn_model_fn(text, labels, mode):
+    print (text)
+    print(labels)
+    print(mode)
     features = text
-    input_layer = tf.reshape(features, [-1, 50, 1, 1])
+    input_layer = tf.reshape(features, [-1, 50, 1])
+    print (input_layer)
     dense_layer = tf.layers.dense(inputs=input_layer, units=hidden, activation=tf.nn.tanh)
     logits = tf.layers.dense(inputs=dense_layer, units=classes, activation=tf.nn.tanh)
 
@@ -147,7 +164,7 @@ def ffnn_model_fn(text, labels, mode):
         loss=loss,
         learning_rate=1e-4,
         optimizer="Adam",
-        global_step=tf.contrib.get_global_step()
+        global_step=tf.train.get_global_step()
     )
 
     predictions = {
@@ -177,11 +194,17 @@ w2v["UNK"] = np.zeros(dims)
 
 print("Importing and converting text")
 tree = ET.parse('./ted_en-20160408.xml')
-doc_df = pd.DataFrame(list(iter_files(tree)))
-
-doc_train = doc_df.ix[:1584, :]
-doc_validation = doc_df.ix[1585:1835, :]
-doc_test = doc_df.ix[-250:, :]
+labels, text = iter_files(tree)
+doc_train, doc_validation, doc_test = {}, {}, {}
+doc_train["text"] = text[:1584]
+doc_train["labels"] = labels[:1584]
+doc_train["length"] = len(doc_train["text"])
+doc_validation["text"] = text[1585:1590]
+doc_validation["labels"] = labels[1585:1590]
+doc_test["text"] = text[-250:]
+doc_test["labels"] = labels[-250:]
+print(doc_validation["labels"])
+print(doc_validation["text"])
 
 # Runs tensorflow
 init = tf.global_variables_initializer()
@@ -200,18 +223,11 @@ def test_input_fn():
 
 def original_session():
     for i in range(steps):
-        batch = doc_train.sample(n=batch_size, replace=True)
-        #    batch = doc_train[(i*batch_size):((i+1)*batch_size)]
-        text, labels = input_fn(batch)
-        # batch_text = tf.train.batch(batch["text"].values, batch_size)
-        # print (batch_text.shape)
-        # batch_label = tf.train.batch(batch["label"].values, batch_size)
-        # print(batch_label.shape)
-        # assert all(x.shape == (None, dims) for x in batch["text"])
-        # assert all(y.shape == (None, classes) for y in batch["label"])
+        samples = random.sample(range(doc_train["length"]), batch_size)
+        text_array, labels_array = batch_input_fn(doc_train, samples)
         if i % 100 == 0:
             print("Run training step number", i)
-        sess.run(train_step, feed_dict={x: text, y: labels})
+        sess.run(train_step, feed_dict={x: text_array, y: labels_array})
     test_text, test_labels = input_fn(doc_test)
     train_text, train_labels = input_fn(doc_train)
     print ("Training accuracy: ", sess.run(accuracy, feed_dict={x: train_text, y: train_labels}))
@@ -219,11 +235,13 @@ def original_session():
 
 
 def ffnn():
-    doc_train_text, doc_train_labels = input_fn(doc_train)
+    doc_train_text, doc_train_labels = input_fn(doc_validation)
+    print (type(doc_train_text))
+    print (type(doc_train_labels))
     eval_text, eval_labels = input_fn(doc_test)
-    tensor_train_text = tf.constant(list(doc_train_text))
+    #tensor_train_text = tf.constant(doc_train_text)
     ted_classifier.fit(
-        x=tensor_train_text,
+        x=doc_train_text,
         y=doc_train_labels,
         batch_size=50,
         steps=100
@@ -239,6 +257,5 @@ def ffnn():
     )
     print (eval_results)
 
-ffnn()
-#new_session()
-#originalSession()
+#ffnn()
+original_session()
