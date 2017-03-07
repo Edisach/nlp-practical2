@@ -97,7 +97,6 @@ def batch_input_fn(df, samples):
     for x in range(number_samples):
         text_array[x] = df["text"][x]
         labels_array[x] = df["labels"][x]
-
     return text_array, labels_array
 
 
@@ -120,8 +119,8 @@ def embed_text(text):
 
 # Define classifier model
 
-steps = 10000      # Number of times to run training step
-batch_size = 50
+steps = 40000      # Number of times to run training step
+batch_size = 51
 dims = 50           # Dimensionality of vocabulary
 classes = 8         # Dimensionality of classes
 hidden = 100         # Hidden features
@@ -141,7 +140,7 @@ p = tf.nn.softmax(u)
 
 loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=u))
 
-train_step = tf.train.AdamOptimizer(1e-3).minimize(loss)
+train_step = tf.train.AdamOptimizer(1e-4).minimize(loss)
 
 correct_prediction = tf.equal(tf.argmax(p, 1), tf.argmax(y, 1))
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
@@ -220,14 +219,20 @@ def test_input_fn():
 
 
 def original_session():
+    test_text, test_labels = input_fn(doc_test)
+    train_text, train_labels = input_fn(doc_train)
+    print (test_text[0])
+    print (train_text[0])
     for i in range(steps):
         samples = random.sample(range(doc_train["length"]), batch_size)
         text_array, labels_array = batch_input_fn(doc_train, samples)
         _, c = sess.run([train_step, loss], feed_dict={x: text_array, y: labels_array})
         if i % 100 == 0:
             print("Run training step number", i, "Cost:", c)
-    test_text, test_labels = input_fn(doc_test)
-    train_text, train_labels = input_fn(doc_train)
+        if i % 10000 == 0:
+            print ("Training accuracy: ", sess.run(accuracy, feed_dict={x: train_text, y: train_labels}))
+            print("Testing accuracy: ", sess.run(accuracy, feed_dict={x: test_text, y: test_labels}))
+
     print ("Training accuracy: ", sess.run(accuracy, feed_dict={x: train_text, y: train_labels}))
     print ("Testing accuracy:  ", sess.run(accuracy, feed_dict={x: test_text, y: test_labels}))
 
