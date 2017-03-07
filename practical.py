@@ -95,8 +95,8 @@ def batch_input_fn(df, samples):
     text_array = np.zeros(shape=(number_samples, 50))
     labels_array = np.zeros(shape=(number_samples, 8))
     for x in range(number_samples):
-        text_array[x] = df["text"][x]
-        labels_array[x] = df["labels"][x]
+        text_array[x] = df["text"][samples[x]]
+        labels_array[x] = df["labels"][samples[x]]
     return text_array, labels_array
 
 
@@ -119,7 +119,7 @@ def embed_text(text):
 
 # Define classifier model
 
-steps = 40000      # Number of times to run training step
+steps = 100000      # Number of times to run training step
 batch_size = 51
 dims = 50           # Dimensionality of vocabulary
 classes = 8         # Dimensionality of classes
@@ -262,3 +262,5 @@ def ffnn():
 
 #ffnn()
 original_session()
+
+sess.close()
