@@ -1,0 +1,35 @@
+steps = 100,000
+training rate = 1e-4
+hidden = 100
+training accuracy = 0.660354
+testing accuracy = 0.348
+user time = 5m9s
+activation = relu
+dropout = 0.3
+
+steps = 100,000
+training rate = 1e-4
+hidden = 100
+training accuracy = 0.681187
+testing accuracy = 0.408
+user time = 4m57s
+activation = tanh
+dropout = 0.3
+
+steps = 100,000
+training rate = 1-4
+hidden = 1,000
+training accuracy = 0.61048
+testing accuracy = 0.44
+user time = 5m48s
+activation = tanh
+dropout = 0.3
+
+steps = 100,000
+training rate = 1e-4
+hidden = 100
+training accuracy = 0.685606
+testing accuracy = 0.416
+user time = 5m8s
+activation = tanh
+dropout = 0.5

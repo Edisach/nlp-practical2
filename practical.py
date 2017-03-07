@@ -125,7 +125,7 @@ dims = 50           # Dimensionality of vocabulary
 classes = 8         # Dimensionality of classes
 hidden = 100         # Hidden features
 learning_rate = 1e-4
-dropout = 0.3
+dropout = 0.5
 x = tf.placeholder(tf.float32, shape=[None, dims])
 y = tf.placeholder(tf.float32, shape=[None, classes])
 
