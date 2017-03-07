@@ -124,6 +124,8 @@ batch_size = 51
 dims = 50           # Dimensionality of vocabulary
 classes = 8         # Dimensionality of classes
 hidden = 100         # Hidden features
+learning_rate = 1e-4
+dropout = 0.3
 x = tf.placeholder(tf.float32, shape=[None, dims])
 y = tf.placeholder(tf.float32, shape=[None, classes])
 
@@ -132,15 +134,17 @@ b = tf.Variable(tf.random_normal([hidden]))
 
 h = tf.nn.tanh(tf.matmul(x, W) + b)
 
+dropout_layer = tf.nn.dropout(h, dropout)
+
 V = tf.Variable(tf.random_normal([hidden, classes]))
 c = tf.Variable(tf.random_normal([classes]))
 
-u = tf.matmul(h, V) + c
+u = tf.matmul(dropout_layer, V) + c
 p = tf.nn.softmax(u)
 
 loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=u))
 
-train_step = tf.train.AdamOptimizer(1e-4).minimize(loss)
+train_step = tf.train.AdamOptimizer(learning_rate).minimize(loss)
 
 correct_prediction = tf.equal(tf.argmax(p, 1), tf.argmax(y, 1))
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
